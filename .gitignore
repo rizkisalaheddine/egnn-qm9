@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+
+# Virtual envs / conda stuff
+.env/
+.venv/
+venv/
+.egnn_modern/
+.envrc
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
+data/
+!data/.gitkeep
+
+# Outputs / logs / checkpoints
+outputs/
+logs/
+runs/
+checkpoints/
+
+# OS-specific
+.DS_Store
+Thumbs.db

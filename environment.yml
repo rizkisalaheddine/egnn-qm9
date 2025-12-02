@@ -1,0 +1,12 @@
+name: egnn_modern
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - torch
+      - torch-geometric
+      - egnn-pytorch
+      - tqdm

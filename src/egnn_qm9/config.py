@@ -12,7 +12,7 @@ class TrainConfig:
     base_lr: float = 5e-4         # for most properties
     lr_homo_lumo_gap: float = 1e-3
 
-    weight_decay: float = 1e-12   # tiny weight decay as in many EGNN impls
+    weight_decay: float = 1e-16   # tiny weight decay as in many EGNN impls
 
     # Model architecture (paper: 7 layers, 128 channels)
     hidden_dim: int = 128

@@ -19,8 +19,10 @@ class EGNNLayer(nn.Module):
     - use m_ij * a_ij for node and coord updates
     """
 
-    def __init__(self, hidden_dim: int, edge_attr_dim: int = 0, m_dim: int = 128):
+    def __init__(self, hidden_dim: int, edge_attr_dim: int = 0, m_dim: int = 128,update_coords: bool = False):
         super().__init__()
+
+        self.update_coords = update_coords
 
         self.edge_mlp = nn.Sequential(
             nn.Linear(2 * hidden_dim + 1 + edge_attr_dim, m_dim),
@@ -79,26 +81,27 @@ class EGNNLayer(nn.Module):
         h = h + delta_h
 
         # ---- coordinate update (still equivariant) ----
-        coor_weights = self.coor_mlp(m_ij).squeeze(-1)      # (E,)
-        coord_updates = coord_diff * coor_weights.unsqueeze(-1)
+        if self.update_coords:
+            coor_weights = self.coor_mlp(m_ij).squeeze(-1)      # (E,)
+            coord_updates = coord_diff * coor_weights.unsqueeze(-1)
 
-        coord_aggr = torch.zeros_like(x)
-        coord_aggr.index_add_(0, col, coord_updates)
+            coord_aggr = torch.zeros_like(x)
+            coord_aggr.index_add_(0, col, coord_updates)
 
-        x = x + coord_aggr
+            x = x + coord_aggr
 
         return h, x
 
 
 class EGNNQM9Model(nn.Module):
     def __init__(self, in_dim: int, edge_attr_dim: int,
-                 hidden_dim: int = 128, num_layers: int = 7):
+                 hidden_dim: int = 128, num_layers: int = 7,update_coords: bool = False):
         super().__init__()
 
         self.embedding = nn.Linear(in_dim, hidden_dim)
 
         self.layers = nn.ModuleList(
-            [EGNNLayer(hidden_dim, edge_attr_dim=edge_attr_dim, m_dim=hidden_dim)
+            [EGNNLayer(hidden_dim, edge_attr_dim=edge_attr_dim, m_dim=hidden_dim, update_coords=update_coords)
              for _ in range(num_layers)]
         )
 

@@ -29,12 +29,12 @@ def load_qm9_splits(root: str, batch_size: int, property_name: str):
     dataset = dataset[perm]
 
     N = len(dataset)
-    n_train = int(0.8 * N)
-    n_val = int(0.1 * N)
-
+    n_train = 100_000
+    n_val   = 18_000
+    n_test  = 13_000
     train_dataset = dataset[:n_train]
     val_dataset = dataset[n_train:n_train + n_val]
-    test_dataset = dataset[n_train + n_val:]
+    test_dataset = dataset[n_train + n_val:n_train + n_val + n_test]
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size)

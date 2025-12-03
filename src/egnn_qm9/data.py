@@ -42,7 +42,8 @@ def load_qm9_splits(root: str, batch_size: int, property_name: str):
 
     # normalization of target
     with torch.no_grad():
-        ys = torch.stack([d.y[target_idx] for d in train_dataset], dim=0)
+        #ys = torch.stack([d.y[target_idx] for d in train_dataset], dim=0)
+        ys = torch.stack([d.y[0, target_idx] for d in train_dataset], dim=0)
         y_mean = ys.mean().item()
         y_mad = (ys - y_mean).abs().mean().item()
 

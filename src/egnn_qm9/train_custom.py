@@ -1,16 +1,23 @@
 # src/egnn_qm9/train.py
 
 import argparse
+import os
+import json
+from dataclasses import asdict
+
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from tqdm import tqdm
+
 
 from .config import TrainConfig
 from .data import load_qm9_splits, PROPERTY_TO_IDX
 from .custom_model import EGNNQM9Model
 from .utils import get_device
-from torch.optim.lr_scheduler import CosineAnnealingLR
+
+
 
 
 def run_epoch(model, loader, device, y_mean, y_mad, target_idx, train: bool, optimizer=None):
@@ -92,10 +99,30 @@ def main():
         scheduler = CosineAnnealingLR(optimizer, T_max=cfg.num_epochs, eta_min=0.0)
     else:
         scheduler = None
+    
+    # ---------- OUTPUT / MODEL DIRS ----------
+    os.makedirs("outputs", exist_ok=True)
+    models_root = "models"
+    property_dir = os.path.join(models_root, cfg.property_name)
+    os.makedirs(property_dir, exist_ok=True)
+
+    # Save config once at the beginning (as JSON)
+    config_path = os.path.join(property_dir, "config.json")
+    with open(config_path, "w") as f:
+        json.dump(asdict(cfg), f, indent=2)
+    print(f"Saved config to {config_path}")
+
+    best_model_path = os.path.join(property_dir, "best_model_state.pt")
 
     # --- NEW: lists to track the history ---
     train_losses, train_maes = [], []
     val_losses, val_maes = [], []
+
+    best_val_loss = float("inf")
+    best_epoch = 0
+    epochs_no_improve = 0
+    patience = cfg.patience
+    min_delta = cfg.min_delta
 
     for epoch in range(1, cfg.num_epochs + 1):
         train_loss, train_mae = run_epoch(
@@ -118,7 +145,28 @@ def main():
             f"Epoch {epoch:03d} | "
             f"Train MAE: {train_mae:.4f} | Val MAE: {val_mae:.4f}"
         )
+        # ---------- EARLY STOPPING + SAVE BEST MODEL ----------
+        if val_loss + min_delta < best_val_loss:
+            best_val_mae = val_mae
+            best_val_loss = val_loss
+            best_epoch = epoch
+            epochs_no_improve = 0
 
+            # save full model (not just state_dict)
+            torch.save(model, best_model_path)
+            print(f"  -> New best val MAE. Saved model to {best_model_path}")
+        else:
+            epochs_no_improve += 1
+            print(f"  -> No improvement for {epochs_no_improve} epochs")
+
+        if epochs_no_improve >= patience:
+            print(f"Early stopping at epoch {epoch} (best epoch {best_epoch}, best val MAE {best_val_mae:.4f})")
+            break
+    # ---------- LOAD BEST MODEL ----------
+    state_dict = torch.load(best_model_path, map_location=device)
+    model.load_state_dict(state_dict)
+    model.to(device)
+    
     # --- evaluate on test set ---
     test_loss, test_mae = run_epoch(
         model, test_loader, device, y_mean, y_mad, target_idx, train=False

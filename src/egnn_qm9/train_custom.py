@@ -119,6 +119,7 @@ def main():
     val_losses, val_maes = [], []
 
     best_val_loss = float("inf")
+    best_val_mae = float("inf")
     best_epoch = 0
     epochs_no_improve = 0
     patience = cfg.patience
@@ -144,6 +145,7 @@ def main():
         print(
             f"Epoch {epoch:03d} | "
             f"Train MAE: {train_mae:.4f} | Val MAE: {val_mae:.4f}"
+            f"Val loss: {val_loss:.6f} | Best val loss: {best_val_loss:.6f}"
         )
         # ---------- EARLY STOPPING + SAVE BEST MODEL ----------
         if val_loss + min_delta < best_val_loss:
@@ -153,7 +155,7 @@ def main():
             epochs_no_improve = 0
 
             # save full model (not just state_dict)
-            torch.save(model, best_model_path)
+            torch.save(model.state_dict(), best_model_path)
             print(f"  -> New best val MAE. Saved model to {best_model_path}")
         else:
             epochs_no_improve += 1
@@ -184,7 +186,7 @@ def main():
         "property": cfg.property_name,
     }
 
-    import os, json
+    
     os.makedirs("outputs", exist_ok=True)
     out_path = os.path.join("outputs", f"metrics_{cfg.property_name}.json")
     with open(out_path, "w") as f:
